@@ -4,19 +4,36 @@ SSH key generation
 ```mermaid
 classDiagram
 
-class Proxy{
+    class OperationsP2P{
+        <<interface>>
+        +connect(public_key)
+        +send_blockchain(blockchain: Blockchain)
+        +receive_blockchain(): Blockchain
+    }
+
+    class OperationsBlockchain{
+        <<interface>>
+        +get_blockchain(): Blockchain
+        +mine_block()
+        +create_transaction(): Transaction
+        +balance(public_key): float
+        +generate_key(): string
+    }
+    
+    class Proxy{
         -Blockchain: Blockchain
         -P2P: P2P
-        -miners: Miner
-        -users: User
+        -miners: Miner[]
+        -users: User[]
         +validate_key():bool
+        +validate_connection():bool
         +get_blockchain(): Blockchain
         +mine_block()
         +create_transaction(): Transaction
         +balance(): float
         +generate_key(): string
         +create_transaction(): Transaction
-        +connect()
+        +connect(public_key)
         +send_blockchain(blockchain: Blockchain)
         +receive_blockchain(): Blockchain
     }
@@ -30,31 +47,16 @@ class Proxy{
         +mine_block()
         +validate_chain(): bool
         +create_transaction(sender:str,receiver, amount): Transaction
-        +balance(sender): float
-        +generate_key(): string
-    }
-
-    class OperationsBlockchain{
-        <<interface>>
-        +get_blockchain(): Blockchain
-        +mine_block()
-        +create_transaction(): Transaction
-        +balance(): float
+        +balance(public_key): float
         +generate_key(): string
     }
 
     class P2P{
+        -public_key: string
         -host: string
         -port: int
         -network: dict[string, string]
-        +connect()
-        +send_blockchain(blockchain: Blockchain)
-        +receive_blockchain(): Blockchain
-    }
-
-    class OperationsP2P{
-        <<interface>>
-        +connect()
+        +connect(public_key)
         +send_blockchain(blockchain: Blockchain)
         +receive_blockchain(): Blockchain
     }
@@ -65,10 +67,8 @@ class Proxy{
     }
 
     class Miner{
+        -Proxy: Proxy
         +mine_block()
-        +create_transaction(): Transaction
-        +balance(): float
-        +generate_key(): string
         +update()
     }
 
@@ -77,11 +77,11 @@ class Proxy{
     }
 
     class Block{
-        -timestamp
-        -transacciones[]
-        -previous_hash
-        -magic_number
-        -hash
+        -timestamp: datetime
+        -transactions: Transactions[]
+        -previous_hash: string
+        -magic_number: int
+        -hash: string
 
         +calculate_hash(): string
         +mine_block()
@@ -89,7 +89,7 @@ class Proxy{
 
     class Transaction{
         <<interface>>
-        +change_status()
+        +change_status(status: Status)
     }
 
     class Status{
@@ -110,7 +110,7 @@ class Proxy{
         -miner
         -reward
         -status
-        +change_status()
+        +change_status(status: Status)
     }
 
     
