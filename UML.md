@@ -67,12 +67,13 @@ classDiagram
     }
 
     class Miner{
-        -Proxy: Proxy
+        +Proxy: Proxy
         +mine_block()
         +update()
     }
 
     class User{
+        +Proxy: Proxy
         +update()
     }
 
@@ -131,5 +132,7 @@ classDiagram
     Proxy *--> Subscriber
     User ..|> Subscriber  
     Miner ..|> Subscriber
+    Proxy <-- Miner
+    Proxy <-- User
 
 ```
