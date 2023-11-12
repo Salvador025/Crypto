@@ -1,2 +1,302 @@
+from __future__ import annotations
+
+import datetime
+import hashlib
+import json
+from abc import ABC, abstractmethod
+from enum import Enum
+from typing import List
+
+# cspell: disable-next-line
+from ecdsa import SECP256k1, SigningKey
+
+
+class Transaction(ABC):
+    class Status(Enum):
+        """enumeration for transaction status"""
+
+        PENDING = "PENDING"
+        CONFIRMED = "CONFIRMED"
+
+    """ interface for transactions """
+
+    @abstractmethod
+    def change_status(self, status: Status) -> None:
+        """method to change the status of the transaction"""
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        """method to return a dictionary with the transaction data"""
+        pass
+
+
+class TransactionUser(Transaction):
+    """class for transactions made by users"""
+
+    def __init__(self, amount: float, sender: str, receiver: str) -> None:
+        """constructor method for TransactionUser class"""
+        self.__amount: float = amount
+        self.__sender: str = sender
+        self.__receiver: str = receiver
+        self.__status: Transaction.Status = Transaction.Status.PENDING
+
+    @property
+    def amount(self) -> float:
+        """getter method for amount"""
+        return self.__amount
+
+    @property
+    def sender(self) -> str:
+        """getter method for sender"""
+        return self.__sender
+
+    @property
+    def receiver(self) -> str:
+        """getter method for receiver"""
+        return self.__receiver
+
+    @property
+    def status(self) -> Transaction.Status:
+        """getter method for status"""
+        return self.__status
+
+    def change_status(self, status: Transaction.Status) -> None:
+        """method to change the status of the transaction"""
+        self.__status = status
+
+    def to_dict(self):
+        """method to return a dictionary with the transaction data"""
+        return {
+            "amount": self.amount,
+            "sender": self.sender,
+            "receiver": self.receiver,
+            "status": self.status.value,
+        }
+
+
+class TransactionMiner(Transaction):
+    """class for transactions made by miners"""
+
+    def __init__(self, amount: float, miner: str) -> None:
+        """constructor method for TransactionMiner class"""
+        self.__amount: float = amount
+        self.__miner: str = miner
+        self.__coinbase = "ITcoin"
+        self.__status: Transaction.Status = Transaction.Status.PENDING
+
+    @property
+    def amount(self) -> float:
+        """getter method for amount"""
+        return self.__amount
+
+    @property
+    def miner(self) -> str:
+        """getter method for miner"""
+        return self.__miner
+
+    @property
+    def coinbase(self) -> str:
+        """getter method for coinbase"""
+        return self.__coinbase
+
+    @property
+    def status(self) -> Transaction.Status:
+        """getter method for status"""
+        return self.__status
+
+    def change_status(self, status: Transaction.Status) -> None:
+        """method to change the status of the transaction"""
+        self.__status = status
+
+    def to_dict(self):
+        """method to return a dictionary with the transaction data"""
+        return {
+            "amount": self.amount,
+            "miner": self.miner,
+            "coinbase": self.coinbase,
+            "status": self.status.value,
+        }
+
+
+class Block:
+    """class for blocks"""
+
+    def __init__(
+        self, transactions: List[Transaction], timestamp, previous_block: Block = None
+    ) -> None:
+        """constructor method for Block class"""
+        self.__timestamp: datetime = timestamp
+        self.__transactions: List[Transaction] = transactions
+        self.__previous_block: Block = previous_block
+        self.__magic_number: int = 1
+        self.__hash: str = self.calculate_hash(transactions, timestamp, self.__magic_number)
+
+    @property
+    def timestamp(self) -> datetime:
+        """getter method for timestamp"""
+        return self.__timestamp
+
+    @property
+    def transactions(self) -> List[Transaction]:
+        """getter method for transactions"""
+        return self.__transactions
+
+    @property
+    def previous_block(self) -> str:
+        """getter method for previous_hash"""
+        return self.__previous_block
+
+    @property
+    def hash(self) -> str:
+        """getter method for hash"""
+        return self.__hash
+
+    def calculate_hash(self, data: List[Transaction], timestamp: datetime, number: int) -> str:
+        """method to calculate the hash of the block"""
+        input_data = str(data) + str(timestamp) + str(number)
+        input_data = input_data.encode()
+        hash = hashlib.sha256(input_data)
+        return hash.hexdigest()
+
+    def mine_block(self, difficulty: int) -> None:
+        """method to mine the block"""
+        while self.__hash[:difficulty] != "0" * difficulty:
+            self.__magic_number += 1
+            self.__hash = self.calculate_hash(
+                self.__transactions, self.__timestamp, self.__magic_number
+            )
+        print("Block mined: " + self.__hash)
+
+    def to_dict(self):
+        """method to return a dictionary with the block data"""
+        return {
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            "transactions": [transaction.to_dict() for transaction in self.transactions],
+            "previous_block": self.previous_block.hash if self.previous_block else None,
+            "hash": self.hash,
+        }
+
+    def __str__(self):
+        """method to return a JSON representation of the block"""
+        return json.dumps(self.to_dict(), indent=4)
+
+
 class Blockchain:
-    pass
+    """class for blockchain"""
+
+    def __init__(self) -> None:
+        """constructor method for Blockchain class"""
+        self.__chain: List[Block] = [self.__create_genesis_block()]
+        self.__difficulty: int = 4
+        self.__mempool: List[Transaction] = []
+        self.__mining_reward: int = 10
+
+    @property
+    def chain(self) -> List[Block]:
+        """getter method for chain"""
+        return self.__chain
+
+    @property
+    def mempool(self) -> List[Transaction]:
+        """getter method for mempool"""
+        return self.__mempool
+
+    @property
+    def mining_reward(self) -> float:
+        """getter method for mining_reward"""
+        return self.__mining_reward
+
+    def __create_genesis_block(self) -> Block:
+        """method to create the genesis block"""
+        return Block([], datetime.datetime.now())
+
+    def get_latest_block(self) -> Block:
+        """method to get the latest block"""
+        return self.__chain[-1]
+
+    def mine_block(self, public_key: str) -> None:
+        """method to mine pending transactions"""
+        block = Block(self.__mempool, datetime.datetime.now(), self.get_latest_block())
+        block.mine_block(self.__difficulty)
+        print("Block successfully mined!")
+        for transaction in block.transactions:
+            transaction.change_status(Transaction.Status.CONFIRMED)
+        self.__chain.append(block)
+        self.__mempool = [TransactionMiner(self.__mining_reward, public_key)]
+
+    def create_transaction(self, sender: str, receiver: str, amount: float) -> None:
+        """method to create a transaction"""
+        transaction = TransactionUser(amount, sender, receiver)
+        self.__mempool.append(transaction)
+
+    def get_balance(self, public_key: str) -> float:
+        """method to get the balance of an address"""
+        balance = 0
+        for block in self.__chain:
+            for transaction in block.transactions:
+                if transaction.status == Transaction.Status.CONFIRMED:
+                    if isinstance(transaction, TransactionUser):
+                        if transaction.sender == public_key:
+                            balance -= transaction.amount
+                        elif transaction.receiver == public_key:
+                            balance += transaction.amount
+                    elif isinstance(transaction, TransactionMiner):
+                        if transaction.miner == public_key:
+                            balance += transaction.amount
+        return balance
+
+    def is_chain_valid(self) -> bool:
+        """method to check if the chain is valid"""
+        for i in range(1, len(self.__chain)):
+            current_block = self.__chain[i]
+            previous_block = self.__chain[i - 1]
+            if current_block.hash != current_block.calculate_hash(
+                current_block.transactions, current_block.timestamp, current_block.magic_number
+            ):
+                return False
+            if (
+                not current_block.previous_block
+                or current_block.previous_block.hash != previous_block.hash
+            ):
+                return False
+        return True
+
+    def generate_key(self, seed_phrase: str) -> str:
+        """method to generate public"""
+        private_key_bytes = hashlib.sha256(seed_phrase.encode()).digest()
+        # cspell: disable-next-line
+        sk = SigningKey.from_string(private_key_bytes, curve=SECP256k1)
+        vk = sk.verifying_key
+        compressed_public_key = vk.to_string("compressed").hex()
+
+        return compressed_public_key
+
+    def to_dict(self):
+        return {
+            "chain": [block.to_dict() for block in self.chain],
+        }
+
+    def __str__(self):
+        return json.dumps(self.to_dict(), indent=4)
+
+
+if __name__ == "__main__":
+    blockchain = Blockchain()
+    # cspell: disable-next-line
+    public_key1 = blockchain.generate_key("ITAM")
+    print("Public key: " + public_key1)
+    # cspell: disable-next-line
+    public_key2 = blockchain.generate_key("FEWGW")
+    print("Public key: " + public_key2)
+
+    blockchain.create_transaction(public_key1, public_key2, 1)
+    blockchain.create_transaction(public_key1, public_key2, 2)
+    blockchain.create_transaction(public_key1, public_key2, 3)
+
+    blockchain.mine_block(public_key1)
+    blockchain.create_transaction(public_key2, public_key1, 2)
+    blockchain.mine_block(public_key2)
+    print(blockchain.get_balance(public_key1))
+    print(blockchain.get_balance(public_key2))
+    print(blockchain)

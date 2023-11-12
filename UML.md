@@ -43,12 +43,14 @@ classDiagram
         -mempool: Transaction[]
         -difficulty: int
         -mine_reward: int
-        -last_block(): Block
+        -create_genesis_block(): Block
+        +last_block(): Block
         +mine_block()
-        +validate_chain(): bool
-        +create_transaction(sender:str,receiver, amount): Transaction
-        +balance(public_key): float
+        +is_chain_valid(): bool
+        +create_transaction(sender:str,receiver, amount)
+        +get_balance(public_key): float
         +generate_key(): string
+        +to_dict(): dict
     }
 
     class P2P{
@@ -80,17 +82,18 @@ classDiagram
     class Block{
         -timestamp: datetime
         -transactions: Transactions[]
-        -previous_hash: string
+        -previous_block: Block
         -magic_number: int
         -hash: string
-
-        +calculate_hash(): string
-        +mine_block()
+        +calculate_hash(data: Transactions[], timestamp: datetime, number: int): string
+        +mine_block(difficulty: int)
+        +to_dict(): dict
     }
 
     class Transaction{
         <<interface>>
         +change_status(status: Status)
+        +to_dict(): dict
     }
 
     class Status{
@@ -105,13 +108,17 @@ classDiagram
         -amount
         -status
         +change_status(status: Status)
+        +to_dict(): dict
     }
 
     class TransactionMiner{
         -miner
         -reward
         -status
+        -coinbase
+        -status
         +change_status(status: Status)
+        +to_dict(): dict
     }
 
     
