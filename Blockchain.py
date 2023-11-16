@@ -34,12 +34,18 @@ class Transaction(ABC):
 class TransactionUser(Transaction):
     """class for transactions made by users"""
 
-    def __init__(self, amount: float, sender: str, receiver: str) -> None:
+    def __init__(
+        self,
+        amount: float,
+        sender: str,
+        receiver: str,
+        status: Transaction.Status = Transaction.Status.PENDING,
+    ) -> None:
         """constructor method for TransactionUser class"""
         self.__amount: float = amount
         self.__sender: str = sender
         self.__receiver: str = receiver
-        self.__status: Transaction.Status = Transaction.Status.PENDING
+        self.__status: Transaction.Status = status
 
     @property
     def amount(self) -> float:
@@ -78,12 +84,14 @@ class TransactionUser(Transaction):
 class TransactionMiner(Transaction):
     """class for transactions made by miners"""
 
-    def __init__(self, amount: float, miner: str) -> None:
+    def __init__(
+        self, amount: float, miner: str, status: Transaction.Status = Transaction.Status.PENDING
+    ) -> None:
         """constructor method for TransactionMiner class"""
         self.__amount: float = amount
         self.__miner: str = miner
         self.__coinbase = "ITcoin"
-        self.__status: Transaction.Status = Transaction.Status.PENDING
+        self.__status: Transaction.Status = status
 
     @property
     def amount(self) -> float:
@@ -113,8 +121,8 @@ class TransactionMiner(Transaction):
         """method to return a dictionary with the transaction data"""
         return {
             "amount": self.amount,
-            "miner": self.miner,
-            "coinbase": self.coinbase,
+            "sender": self.coinbase,
+            "receiver": self.miner,
             "status": self.status.value,
         }
 
@@ -123,13 +131,17 @@ class Block:
     """class for blocks"""
 
     def __init__(
-        self, transactions: List[Transaction], timestamp, previous_block: Block = None
+        self,
+        transactions: List[Transaction],
+        timestamp: datetime,
+        previous_block: Block = None,
+        magic_number: int = 1,
     ) -> None:
         """constructor method for Block class"""
         self.__timestamp: datetime = timestamp
         self.__transactions: List[Transaction] = transactions
         self.__previous_block: Block = previous_block
-        self.__magic_number: int = 1
+        self.__magic_number: int = magic_number
         self.__hash: str = self.calculate_hash(transactions, timestamp, self.__magic_number)
 
     @property
@@ -152,7 +164,8 @@ class Block:
         """getter method for hash"""
         return self.__hash
 
-    def calculate_hash(self, data: List[Transaction], timestamp: datetime, number: int) -> str:
+    @staticmethod
+    def calculate_hash(data: List[Transaction], timestamp: datetime, number: int) -> str:
         """method to calculate the hash of the block"""
         input_data = str(data) + str(timestamp) + str(number)
         input_data = input_data.encode()
@@ -163,23 +176,28 @@ class Block:
         """method to mine the block"""
         while self.__hash[:difficulty] != "0" * difficulty:
             self.__magic_number += 1
-            self.__hash = self.calculate_hash(
-                self.__transactions, self.__timestamp, self.__magic_number
-            )
+            transactions = []
+            for transaction in self.__transactions:
+                transaction = transaction.to_dict()
+                transactions.append(
+                    {
+                        "amount": transaction["amount"],
+                        "sender": transaction["sender"],
+                        "receiver": transaction["receiver"],
+                    }
+                )
+            self.__hash = self.calculate_hash(transactions, self.__timestamp, self.__magic_number)
         print("Block mined: " + self.__hash)
 
     def to_dict(self):
         """method to return a dictionary with the block data"""
         return {
-            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S.%f"),
             "transactions": [transaction.to_dict() for transaction in self.transactions],
             "previous_block": self.previous_block.hash if self.previous_block else None,
+            "magic_number": self.__magic_number,
             "hash": self.hash,
         }
-
-    def __str__(self):
-        """method to return a JSON representation of the block"""
-        return json.dumps(self.to_dict(), indent=4)
 
 
 class Blockchain:
@@ -246,21 +264,65 @@ class Blockchain:
                             balance += transaction.amount
         return balance
 
-    def is_chain_valid(self) -> bool:
+    @staticmethod
+    def is_chain_valid(chain: dict) -> bool:
         """method to check if the chain is valid"""
-        for i in range(1, len(self.__chain)):
-            current_block = self.__chain[i]
-            previous_block = self.__chain[i - 1]
-            if current_block.hash != current_block.calculate_hash(
-                current_block.transactions, current_block.timestamp, current_block.magic_number
+        for i in range(1, len(chain)):
+            current_block = chain[i]
+            previous_block = chain[i - 1]
+            transactions = [
+                {
+                    "amount": transaction["amount"],
+                    "sender": transaction["sender"],
+                    "receiver": transaction["receiver"],
+                }
+                for transaction in current_block["transactions"]
+            ]
+            if current_block["hash"] != Block.calculate_hash(
+                transactions,
+                datetime.datetime.strptime(current_block["timestamp"], "%Y-%m-%d %H:%M:%S.%f"),
+                current_block["magic_number"],
             ):
                 return False
             if (
-                not current_block.previous_block
-                or current_block.previous_block.hash != previous_block.hash
+                not current_block["previous_block"]
+                or current_block["previous_block"] != previous_block["hash"]
             ):
                 return False
         return True
+
+    def __update_transactions(self, transactions_data: dict) -> None:
+        transactions = []
+        for transaction_data in transactions_data:
+            if transaction_data["coinbase"] == "ITcoin":
+                transaction = TransactionMiner(
+                    transaction_data["amount"],
+                    transaction_data["receiver"],
+                    transaction_data["status"],
+                )
+            else:
+                transaction = TransactionUser(
+                    transaction_data["amount"],
+                    transaction_data["sender"],
+                    transaction_data["receiver"],
+                    transaction_data["status"],
+                )
+            transactions.append(transaction)
+        return transactions
+
+    def update_chain(self, data: dict) -> None:
+        """method to update the chain"""
+        self.__chain = []
+        for block_data in data["chain"]:
+            transactions = self.__update_transactions(block_data["transactions"])
+            block = Block(
+                transactions,
+                datetime.datetime.strptime(block_data["timestamp"], "%Y-%m-%d %H:%M:%S.%f"),
+                block_data["previous_block"],
+                block_data["magic_number"],
+            )
+            self.__chain.append(block)
+            self.__mempool = self.__update_transactions(data["mempool"])
 
     def generate_key(self, seed_phrase: str) -> str:
         """method to generate public"""
@@ -275,6 +337,8 @@ class Blockchain:
     def to_dict(self):
         return {
             "chain": [block.to_dict() for block in self.chain],
+            "length": len(self.chain),
+            "mempool": [transaction.to_dict() for transaction in self.mempool],
         }
 
     def __str__(self):
@@ -299,4 +363,12 @@ if __name__ == "__main__":
     blockchain.mine_block(public_key2)
     print(blockchain.get_balance(public_key1))
     print(blockchain.get_balance(public_key2))
-    print(blockchain)
+
+    blockchain.create_transaction(public_key1, public_key2, 2)
+    blockchain.create_transaction(public_key1, public_key2, 3)
+    blockchain.mine_block(public_key1)
+
+    print(blockchain.get_balance(public_key1))
+    print(blockchain.get_balance(public_key2))
+    print(blockchain.to_dict())
+    print(blockchain.is_chain_valid(blockchain.to_dict()["chain"]))
