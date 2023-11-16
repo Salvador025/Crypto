@@ -53,8 +53,7 @@ class P2P:
                     longest_blockchain = blockchain
         if longest_blockchain:
             self.blockchain = longest_blockchain
-            return True
-        return False
+        return self.blockchain
 
     def send_block(self, chain: dict):
         self.blockchain = chain
@@ -82,6 +81,24 @@ class P2P:
             response = requests.post(
                 f"http://{url}/receive_transaction", json=transaction, headers=headers
             )
+            if response.status_code == 200:
+                pass
+
+    def get_network(self):
+        @self.app.route("/get_network", methods=["GET"])
+        def get_network_route():
+            headers = request.headers
+            public_keys = [
+                item[1] for sub_tupla in self.nodes for item in sub_tupla if item[0] == "public_key"
+            ]
+            if headers["key"] not in public_keys:
+                self.add_node(f"{request.remote_addr}:{headers['port']}", headers["key"])
+
+            data = []
+            for tuple_node in self.nodes:
+                dict_node = dict(tuple_node)
+                data.append(dict_node)
+            return data
 
     def get_blockchain(self):
         @self.app.route("/get_blockchain", methods=["GET"])
@@ -110,22 +127,6 @@ class P2P:
         def receive_transaction_route():
             self.blockchain["mempool"].append(request.json)
             return "transaction received"
-
-    def get_network(self):
-        @self.app.route("/get_network", methods=["GET"])
-        def get_network_route():
-            headers = request.headers
-            public_keys = [
-                item[1] for sub_tupla in self.nodes for item in sub_tupla if item[0] == "public_key"
-            ]
-            if headers["key"] not in public_keys:
-                self.add_node(f"{request.remote_addr}:{headers['port']}", headers["key"])
-
-            data = []
-            for tuple_node in self.nodes:
-                dict_node = dict(tuple_node)
-                data.append(dict_node)
-            return data
 
     def run(self):
         self.get_blockchain()
