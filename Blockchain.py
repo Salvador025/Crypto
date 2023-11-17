@@ -142,6 +142,16 @@ class Block:
         self.__transactions: List[Transaction] = transactions
         self.__previous_block: Block = previous_block
         self.__magic_number: int = magic_number
+        transactions = []
+        for transaction in self.__transactions:
+            transaction = transaction.to_dict()
+            transactions.append(
+                {
+                    "amount": transaction["amount"],
+                    "sender": transaction["sender"],
+                    "receiver": transaction["receiver"],
+                }
+            )
         self.__hash: str = self.calculate_hash(transactions, timestamp, self.__magic_number)
 
     @property
@@ -247,6 +257,7 @@ class Blockchain:
         """method to create a transaction"""
         transaction = TransactionUser(amount, sender, receiver)
         self.__mempool.append(transaction)
+        return transaction
 
     def get_balance(self, public_key: str) -> float:
         """method to get the balance of an address"""
@@ -291,21 +302,25 @@ class Blockchain:
                 return False
         return True
 
-    def __update_transactions(self, transactions_data: dict) -> None:
+    def __create_transaction(self, transactions_data: dict) -> None:
         transactions = []
         for transaction_data in transactions_data:
-            if transaction_data["coinbase"] == "ITcoin":
+            if transaction_data["sender"] == "ITcoin":
                 transaction = TransactionMiner(
                     transaction_data["amount"],
                     transaction_data["receiver"],
-                    transaction_data["status"],
+                    Transaction.Status.CONFIRMED
+                    if transaction_data["status"] == "CONFIRMED"
+                    else Transaction.Status.PENDING,
                 )
             else:
                 transaction = TransactionUser(
                     transaction_data["amount"],
                     transaction_data["sender"],
                     transaction_data["receiver"],
-                    transaction_data["status"],
+                    Transaction.Status.CONFIRMED
+                    if transaction_data["status"] == "CONFIRMED"
+                    else Transaction.Status.PENDING,
                 )
             transactions.append(transaction)
         return transactions
@@ -313,16 +328,22 @@ class Blockchain:
     def update_chain(self, data: dict) -> None:
         """method to update the chain"""
         self.__chain = []
+        previous_block = None
         for block_data in data["chain"]:
-            transactions = self.__update_transactions(block_data["transactions"])
+            transactions = self.__create_transaction(block_data["transactions"])
             block = Block(
                 transactions,
                 datetime.datetime.strptime(block_data["timestamp"], "%Y-%m-%d %H:%M:%S.%f"),
-                block_data["previous_block"],
+                previous_block,
                 block_data["magic_number"],
             )
+            previous_block = block
             self.__chain.append(block)
-            self.__mempool = self.__update_transactions(data["mempool"])
+        self.__mempool = self.__create_transaction(data["mempool"])
+
+    def update_mempool(self, data: dict) -> None:
+        """method to update the mempool"""
+        self.__mempool = self.__create_transaction(data["mempool"])
 
     def generate_key(self, seed_phrase: str) -> str:
         """method to generate public"""
