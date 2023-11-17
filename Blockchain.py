@@ -302,26 +302,30 @@ class Blockchain:
                 return False
         return True
 
-    def __create_transaction(self, transactions_data: dict) -> None:
+    def __create_transaction(self, transaction_data: dict) -> List[Transaction]:
+        if transaction_data["sender"] == "ITcoin":
+            transaction = TransactionMiner(
+                transaction_data["amount"],
+                transaction_data["receiver"],
+                Transaction.Status.CONFIRMED
+                if transaction_data["status"] == "CONFIRMED"
+                else Transaction.Status.PENDING,
+            )
+        else:
+            transaction = TransactionUser(
+                transaction_data["amount"],
+                transaction_data["sender"],
+                transaction_data["receiver"],
+                Transaction.Status.CONFIRMED
+                if transaction_data["status"] == "CONFIRMED"
+                else Transaction.Status.PENDING,
+            )
+        return transaction
+
+    def __create_transactions(self, transactions_data: dict) -> None:
         transactions = []
         for transaction_data in transactions_data:
-            if transaction_data["sender"] == "ITcoin":
-                transaction = TransactionMiner(
-                    transaction_data["amount"],
-                    transaction_data["receiver"],
-                    Transaction.Status.CONFIRMED
-                    if transaction_data["status"] == "CONFIRMED"
-                    else Transaction.Status.PENDING,
-                )
-            else:
-                transaction = TransactionUser(
-                    transaction_data["amount"],
-                    transaction_data["sender"],
-                    transaction_data["receiver"],
-                    Transaction.Status.CONFIRMED
-                    if transaction_data["status"] == "CONFIRMED"
-                    else Transaction.Status.PENDING,
-                )
+            transaction = self.__create_transaction(transaction_data)
             transactions.append(transaction)
         return transactions
 
@@ -330,7 +334,7 @@ class Blockchain:
         self.__chain = []
         previous_block = None
         for block_data in data["chain"]:
-            transactions = self.__create_transaction(block_data["transactions"])
+            transactions = self.__create_transactions(block_data["transactions"])
             block = Block(
                 transactions,
                 datetime.datetime.strptime(block_data["timestamp"], "%Y-%m-%d %H:%M:%S.%f"),
@@ -339,11 +343,11 @@ class Blockchain:
             )
             previous_block = block
             self.__chain.append(block)
-        self.__mempool = self.__create_transaction(data["mempool"])
+        self.__mempool = self.__create_transactions(data["mempool"])
 
     def update_mempool(self, data: dict) -> None:
         """method to update the mempool"""
-        self.__mempool = self.__create_transaction(data["mempool"])
+        self.__mempool.append(self.__create_transaction(data))
 
     def generate_key(self, seed_phrase: str) -> str:
         """method to generate public"""

@@ -44,8 +44,15 @@ class Proxy(OperationBlocked, OperationP2P):
     def public_key(self) -> str:
         return self.__p2p.public_key
 
+    @property
+    def blockchain(self) -> Blockchain:
+        return self.__blockchain
+
     def connect(self) -> None:
         self.__p2p.connect_node()
+        self.run()
+
+    def run(self) -> None:
         threading.Thread(target=self.__p2p.run).start()
 
     def validate_connection(self) -> bool:
@@ -75,10 +82,10 @@ class Proxy(OperationBlocked, OperationP2P):
         self.__p2p.send_transaction(transaction.to_dict())
 
     def update_transaction(self, transaction: dict) -> None:
-        self.__blockchain.update_transaction(transaction)
+        self.__blockchain.update_mempool(transaction)
 
     def balance(self, public_key: str) -> float:
-        return self.__blockchain.balance(public_key)
+        return self.__blockchain.get_balance(public_key)
 
 
 if __name__ == "__main__":

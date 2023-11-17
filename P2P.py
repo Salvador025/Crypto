@@ -40,7 +40,7 @@ class P2P:
 
     def replace_chain(self):
         """method to replace the current blockchain with the longest blockchain in the network"""
-        network = self.__nodes
+        network = tuple(self.__nodes)
         longest_blockchain = self.__blockchain
         max_length = self.__blockchain["length"]
         for node in network:
@@ -101,6 +101,7 @@ class P2P:
             return False
 
         current_node = {
+            # cspell: disable-next-line
             "url": f"{socket.gethostbyname(socket.gethostname())}:{self.__port}",
             "public_key": self.__public_key,
         }
@@ -117,7 +118,9 @@ class P2P:
             headers = request.headers
             public_keys = [
                 item[1]
+                # cspell: disable-next-line
                 for sub_tupla in self.__nodes
+                # cspell: disable-next-line
                 for item in sub_tupla
                 if item[0] == "public_key"
             ]
@@ -138,7 +141,9 @@ class P2P:
 
             public_keys = [
                 item[1]
+                # cspell: disable-next-line
                 for sub_tupla in self.__nodes
+                # cspell: disable-next-line
                 for item in sub_tupla
                 if item[0] == "public_key"
             ]
