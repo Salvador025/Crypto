@@ -23,4 +23,5 @@ while True:
     elif decision == "4":
         print(user.public_key)
     elif decision == "5":
+        user.stop()
         break

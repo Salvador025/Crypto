@@ -5,5 +5,8 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from Proxy import Proxy
 
-proxy = Proxy("server")
-proxy.run()
+try:
+    proxy = Proxy("server")
+    proxy.run()
+except KeyboardInterrupt:
+    proxy.stop()

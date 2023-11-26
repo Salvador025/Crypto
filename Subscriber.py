@@ -34,6 +34,10 @@ class User(Subscriber):
         """method to send a transaction"""
         self.__proxy.create_transaction(self.__public_key, receiver, amount)
 
+    def stop(self):
+        """method to stop the node"""
+        self.__proxy.stop()
+
     def update(self, message: dict) -> None:
         """method to update the subscriber"""
         print(f'you received a transaction of {message["amount"]} ITcoins from {message["sender"]}')
@@ -70,6 +74,10 @@ class Miner(Subscriber):
         """method to mine a block"""
         self.__mining_status.Mining()
         self.__proxy.mine_block(self.__mining_status)
+
+    def stop(self):
+        """method to stop the node"""
+        self.__proxy.stop()
 
     def update(self, message: str = None) -> None:
         """method to update the subscriber"""

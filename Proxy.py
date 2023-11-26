@@ -85,7 +85,11 @@ class Proxy(OperationBlocked, OperationP2P):
 
     def run(self) -> None:
         """method to run the node"""
-        threading.Thread(target=self.__p2p.run).start()
+        self.__p2p.run()
+
+    def stop(self):
+        """method to stop the node"""
+        self.__p2p.stop()
 
     def validate_connection(self) -> bool:
         """method to validate if the node is connected to the network"""

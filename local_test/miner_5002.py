@@ -25,4 +25,5 @@ while True:
     elif decision == "5":
         miner.mine()
     elif decision == "6":
+        miner.stop()
         break

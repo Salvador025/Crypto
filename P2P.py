@@ -1,5 +1,7 @@
 import socket
+import threading
 from enum import Enum
+from wsgiref.simple_server import make_server
 
 import requests
 from Blockchain import Blockchain
@@ -33,6 +35,7 @@ class P2P:
         self.app = Flask(__name__)
         self.__nodes = set()
         self.__type = type
+        self.server = None
 
     @property
     def public_key(self) -> str:
@@ -203,16 +206,27 @@ class P2P:
                         self.__proxy.notify(transaction)
             return "transaction received"
 
+    def stop(self):
+        if self.server:
+            self.server.shutdown()
+            self.flask_thread.join()
+
     def run(self):
+        def flask_thread():
+            self.app = Flask(__name__)
+            self.get_blockchain()
+            self.receive_blockchain()
+            self.get_network()
+            self.receive_transaction()
+            # cspell: disable-next-line
+            local_ip = socket.gethostbyname(socket.gethostname())
+            self.add_node(node=f"{local_ip}:{self.__port}", public_key=self.__public_key)
+            self.server = make_server("0.0.0.0", self.__port, self.app)
+            self.server.serve_forever()
+
+        self.flask_thread = threading.Thread(target=flask_thread)
+        self.flask_thread.start()
         """method to run the server"""
-        self.get_blockchain()
-        self.receive_blockchain()
-        self.get_network()
-        self.receive_transaction()
-        # cspell: disable-next-line
-        local_ip = socket.gethostbyname(socket.gethostname())
-        self.add_node(node=f"{local_ip}:{self.__port}", public_key=self.__public_key)
-        self.app.run(host="0.0.0.0", port=self.__port)
 
 
 if __name__ == "__main__":
