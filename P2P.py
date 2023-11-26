@@ -1,12 +1,30 @@
 import socket
+from enum import Enum
 
 import requests
 from Blockchain import Blockchain
 from flask import Flask, request
 
 
+class UsersType(Enum):
+    """enum to manage the type of user"""
+
+    SERVER = "server"
+    USER = "user"
+    MINER = "miner"
+
+
 class P2P:
-    def __init__(self, public_key: str, blockchain: dict, port: int = 80, proxy=None):
+    """class to manage the peer to peer network"""
+
+    def __init__(
+        self,
+        public_key: str,
+        blockchain: dict,
+        port: int = 80,
+        proxy=None,
+        type: UsersType = UsersType.SERVER,
+    ):
         """P2P class constructor"""
         self.__proxy = proxy
         self.__public_key: str = public_key
@@ -14,6 +32,7 @@ class P2P:
         self.__port: int = port
         self.app = Flask(__name__)
         self.__nodes = set()
+        self.__type = type
 
     @property
     def public_key(self) -> str:
@@ -57,9 +76,13 @@ class P2P:
             if response.status_code == 200:
                 length = response.json()["length"]
                 blockchain = response.json()
-                if length > max_length and Blockchain.is_chain_valid(blockchain["chain"]):
-                    max_length = length
-                    longest_blockchain = blockchain
+                if Blockchain.is_chain_valid(blockchain["chain"]):
+                    if length > max_length or (
+                        length == max_length
+                        and len(blockchain["mempool"]) > len(longest_blockchain["mempool"])
+                    ):
+                        max_length = length
+                        longest_blockchain = blockchain
         if longest_blockchain:
             self.__blockchain = longest_blockchain
         return self.__blockchain
@@ -161,6 +184,8 @@ class P2P:
                 self.__blockchain = request.json
                 if self.__proxy:
                     self.__proxy.update_blockchain(self.__blockchain)
+                    if self.__type == UsersType.MINER:
+                        self.__proxy.notify()
                 print("blockchain received")
                 return "blockchain received"
             return "blockchain rejected"
@@ -173,7 +198,9 @@ class P2P:
             self.__blockchain["mempool"].append(transaction)
             if self.__proxy:
                 self.__proxy.update_transaction(transaction)
-            print("transaction received")
+                if self.__type == UsersType.USER or self.__type == UsersType.MINER:
+                    if self.__public_key == transaction["receiver"]:
+                        self.__proxy.notify(transaction)
             return "transaction received"
 
     def run(self):

@@ -1,9 +1,17 @@
 import threading
 from abc import ABC, abstractmethod
-from asyncio import sleep
 
 from Blockchain import Block, Blockchain, Transaction
-from P2P import P2P
+from P2P import P2P, UsersType
+
+
+class Subscriber(ABC):
+    """Interface for the subscribers"""
+
+    @abstractmethod
+    def update(self, message: dict) -> None:
+        """method to update the subscriber"""
+        pass
 
 
 class OperationBlocked(ABC):
@@ -47,11 +55,18 @@ class OperationP2P(ABC):
 class Proxy(OperationBlocked, OperationP2P):
     """Class that implements the operations that can be done with the blockchain"""
 
-    def __init__(self, private_key: str, port: int = 80) -> None:
+    def __init__(
+        self,
+        private_key: str,
+        port: int = 80,
+        subscriber: Subscriber = None,
+        type=UsersType.SERVER,
+    ) -> None:
         """constructor of the class"""
         self.__blockchain = Blockchain()
         public_key = self.__blockchain.generate_key(private_key)
-        self.__p2p = P2P(public_key, self.__blockchain.to_dict(), port, self)
+        self.__p2p = P2P(public_key, self.__blockchain.to_dict(), port, self, type)
+        self.__subscriber = subscriber
 
     @property
     def public_key(self) -> str:
@@ -85,18 +100,20 @@ class Proxy(OperationBlocked, OperationP2P):
             return
         self.__blockchain.update_chain(blockchain)
 
-    def mine_block(self) -> None:
+    def mine_block(self, status: Block.StatusHolder) -> None:
         """method to mine a block"""
         if not self.validate_connection():
             return
-        self.__blockchain.mine_block(self.public_key)
+        if not self.__blockchain.mine_block(self.public_key, status):
+            return
+        status.NotMining()
         self.__p2p.send_block(self.__blockchain.to_dict())
 
     def update_blockchain(self, blockchain: dict) -> None:
         """method to update the blockchain"""
         self.__blockchain.update_chain(blockchain)
 
-    def create_transaction(self, sender: str, receiver: str, amount: float) -> Transaction:
+    def create_transaction(self, sender: str, receiver: str, amount: float) -> None:
         """method to create a transaction"""
         if not self.validate_connection():
             return
@@ -110,6 +127,11 @@ class Proxy(OperationBlocked, OperationP2P):
     def balance(self, public_key: str) -> float:
         """method to get the balance of a public key"""
         return self.__blockchain.get_balance(public_key)
+
+    def notify(self, message: dict = None) -> None:
+        """method to notify the subscriber"""
+        if self.__subscriber:
+            self.__subscriber.update(message)
 
 
 if __name__ == "__main__":

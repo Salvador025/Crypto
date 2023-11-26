@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import json
+import threading
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List
@@ -130,6 +131,20 @@ class TransactionMiner(Transaction):
 class Block:
     """class for blocks"""
 
+    class StatusHolder:
+        def __init__(self):
+            self.__status = 0
+
+        @property
+        def status(self):
+            return self.__status
+
+        def Mining(self):
+            self.__status = True
+
+        def NotMining(self):
+            self.__status = False
+
     def __init__(
         self,
         transactions: List[Transaction],
@@ -182,9 +197,10 @@ class Block:
         hash = hashlib.sha256(input_data)
         return hash.hexdigest()
 
-    def mine_block(self, difficulty: int) -> None:
+    def mine_block(self, difficulty: int, status: StatusHolder) -> bool:
         """method to mine the block"""
-        while self.__hash[:difficulty] != "0" * difficulty:
+        flag = self.__hash[:difficulty] != "0" * difficulty
+        while flag and status.status:
             self.__magic_number += 1
             transactions = []
             for transaction in self.__transactions:
@@ -197,7 +213,11 @@ class Block:
                     }
                 )
             self.__hash = self.calculate_hash(transactions, self.__timestamp, self.__magic_number)
+            flag = self.__hash[:difficulty] != "0" * difficulty
+        if flag:
+            return False
         print("Block mined: " + self.__hash)
+        return True
 
     def to_dict(self):
         """method to return a dictionary with the block data"""
@@ -243,15 +263,17 @@ class Blockchain:
         """method to get the latest block"""
         return self.__chain[-1]
 
-    def mine_block(self, public_key: str) -> None:
+    def mine_block(self, public_key: str, status: Block.StatusHolder) -> bool:
         """method to mine pending transactions"""
         block = Block(self.__mempool, datetime.datetime.now(), self.get_latest_block())
-        block.mine_block(self.__difficulty)
+        if not block.mine_block(self.__difficulty, status):
+            return False
         print("Block successfully mined!")
         for transaction in block.transactions:
             transaction.change_status(Transaction.Status.CONFIRMED)
         self.__chain.append(block)
         self.__mempool = [TransactionMiner(self.__mining_reward, public_key)]
+        return True
 
     def create_transaction(self, sender: str, receiver: str, amount: float) -> None:
         """method to create a transaction"""
@@ -360,6 +382,7 @@ class Blockchain:
         return compressed_public_key
 
     def to_dict(self):
+        """method to return a dictionary with the blockchain data"""
         return {
             "chain": [block.to_dict() for block in self.chain],
             "length": len(self.chain),
@@ -367,6 +390,7 @@ class Blockchain:
         }
 
     def __str__(self):
+        """method to return a string with the blockchain data"""
         return json.dumps(self.to_dict(), indent=4)
 
 
