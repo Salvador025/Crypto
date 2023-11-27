@@ -4,38 +4,58 @@ SSH key generation
 ```mermaid
 classDiagram
 
+    Blockchain *--> Block
+    Transaction <--o Block
+    Blockchain o--> Transaction
+    Transaction <|.. TransactionUser
+    Transaction <|.. TransactionMiner
+    Proxy *--> Blockchain
+    OperationsBlockchain <|..Proxy 
+    Blockchain ..> Transaction
+    Proxy --> P2P
+    Proxy <-- P2P 
+    OperationsP2P <|.. Proxy 
+    Proxy --> Subscriber
+    Status ..|> TransactionUser 
+    Status ..|> TransactionMiner   
+    Miner ..|> Subscriber
+    User ..|> Subscriber  
+    Proxy <-- User
+    Proxy <-- Miner
+    P2P <|-- UsersType
+    Block ..> StatusHolder
+    Blockchain ..> StatusHolder
+    Miner --> StatusHolder
+
     class OperationsP2P{
         <<interface>>
-        +connect(public_key)
-        +send_blockchain(blockchain: Blockchain)
-        +receive_blockchain(): Blockchain
+        +connect()
+        +validate_connection(): bool
     }
 
     class OperationsBlockchain{
         <<interface>>
-        +get_blockchain(): Blockchain
-        +mine_block()
-        +create_transaction(): Transaction
-        +balance(public_key): float
-        +generate_key(): string
+        +get_blockchain(): dict
+        +mine_block(): dict
+        +create_transaction(sender: string, receiver: string, amount: float): Transaction
+        +balance(public_key: string): float
     }
     
     class Proxy{
-        -Blockchain: Blockchain
-        -P2P: P2P
-        -miners: Miner[]
-        -users: User[]
-        +validate_key():bool
+        -blockchain: Blockchain
+        -p2p: P2P
+        -subscriber: Subscriber
+        +connect()
+        -run()
+        +stop()
         +validate_connection():bool
-        +get_blockchain(): Blockchain
+        +get_blockchain()
         +mine_block()
-        +create_transaction(): Transaction
+        +update_blockchain(blockchain: dict)
+        +create_transaction()
+        +update_transaction(transaction: dict)
         +balance(): float
-        +generate_key(): string
-        +create_transaction(): Transaction
-        +connect(public_key)
-        +send_blockchain(blockchain: Blockchain)
-        +receive_blockchain(): Blockchain
+        +notify()
     }
 
     class Blockchain{
@@ -46,8 +66,8 @@ classDiagram
         -create_genesis_block(): Block
         +last_block(): Block
         +mine_block(public_key: string, status: StatusHolder): bool
-        +create_transaction(sender:str,receiver: str, amount: float)
-        +get_balance(public_key: str): float
+        +create_transaction(sender:string,receiver: string, amount: float)
+        +get_balance(public_key: string): float
         +is_chain_valid(chain: dict): bool
         -create_transaction(transaction_data: dict): Transaction
         -create_transactions(transactions_data: dict): Transaction[]
@@ -57,17 +77,29 @@ classDiagram
         +to_dict(): dict
     }
 
-<!--checking  -->
     class P2P{
         -proxy: Proxy
         -public_key: string
         -blockchain: dict
         -port: int
-        +app: Flask
+        -app: Flask
         -nodes: Set[(url: string, public_key: string)]
-        +connect(public_key)
-        +send_blockchain(blockchain: Blockchain)
-        +receive_blockchain(): Blockchain
+        -type: UsersType
+        -server: Server
+        +connect()
+        +add_node(node: string, public_key: string)
+        +replace_chain(): dict
+        +send_block(chain: dict)
+        +send_transaction(transaction: dict)
+        +validate_connection(): bool
+        +get_network(): dict
+        +get_blockchain(): dict
+        +receive_blockchain(): string
+        +receive_transaction(): string
+        +disconnect_node(): string
+        +stop()
+        +run()
+
     }
 
     class UsersType{
@@ -82,14 +114,23 @@ classDiagram
         +update()
     }
 
-    class Miner{
-        +Proxy: Proxy
-        +mine_block()
+    class User{
+        -Proxy: Proxy
+        -public_key: string
+        +get_balance(): float
+        +send_transaction(receiver: string, amount: float)
+        +stop_connection()
         +update()
     }
 
-    class User{
-        +Proxy: Proxy
+    class Miner{
+        -Proxy: Proxy
+        -mining_status: StatusHolder
+        -public_key: string
+        +get_balance(): float
+        +send_transaction(receiver: string, amount: float)
+        +mine()
+        +stop_connection()
         +update()
     }
 
@@ -140,25 +181,5 @@ classDiagram
         +to_dict(): dict
     }
 
-    
-
-    
-
-    Blockchain o--> Block
-    Transaction <--o Block
-    Blockchain o--> Transaction
-    Transaction <|.. Status  
-    Transaction ..|> TransactionUser
-    Transaction ..|> TransactionMiner
-    Proxy *--> Blockchain
-    OperationsBlockchain <|..Proxy 
-    Blockchain ..> Transaction
-    Proxy *--> P2P
-    OperationsP2P <|.. Proxy 
-    Proxy *--> Subscriber
-    User ..|> Subscriber  
-    Miner ..|> Subscriber
-    Proxy <-- Miner
-    Proxy <-- User
 
 ```
