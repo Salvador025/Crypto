@@ -70,12 +70,12 @@ class Proxy(OperationsBlockchain, OperationsP2P):
 
     @property
     def public_key(self) -> str:
-        """method to get the public key of the node"""
+        """getter method for the public key"""
         return self.__p2p.public_key
 
     @property
     def blockchain(self) -> Blockchain:
-        """method to get the blockchain of the node"""
+        """getter method for the blockchain"""
         return self.__blockchain
 
     def connect(self) -> None:

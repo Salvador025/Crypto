@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
 from typing import List
 
 from Blockchain import Block
@@ -9,6 +8,8 @@ from Proxy import Proxy, Subscriber
 
 
 class User(Subscriber):
+    """class to create a user"""
+
     def __init__(self, private_key: str, port=80) -> None:
         """constructor of the class"""
         self.__proxy: Proxy = Proxy(private_key, port, self, UsersType.USER)
@@ -18,12 +19,12 @@ class User(Subscriber):
 
     @property
     def public_key(self) -> str:
-        """method to get the public key"""
+        """getter method for the public key"""
         return self.__public_key
 
     @property
     def blockchain(self) -> List[Block]:
-        """method to get the blockchain"""
+        """getter method for the blockchain"""
         return self.__proxy.blockchain
 
     def get_balance(self) -> float:
@@ -34,7 +35,7 @@ class User(Subscriber):
         """method to send a transaction"""
         self.__proxy.create_transaction(self.__public_key, receiver, amount)
 
-    def stop_connection(self):
+    def stop_connection(self) -> None:
         """method to stop the connection with the network"""
         self.__proxy.stop()
 
@@ -54,12 +55,12 @@ class Miner(Subscriber):
 
     @property
     def public_key(self) -> str:
-        """method to get the public key"""
+        """getter method for the public key"""
         return self.__public_key
 
     @property
     def blockchain(self) -> List[Block]:
-        """method to get the blockchain"""
+        """getter method for the blockchain"""
         return self.__proxy.blockchain
 
     def get_balance(self) -> float:
@@ -75,7 +76,7 @@ class Miner(Subscriber):
         self.__mining_status.Mining()
         self.__proxy.mine_block(self.__mining_status)
 
-    def stop_connection(self):
+    def stop_connection(self) -> None:
         """method to stop the node"""
         self.__proxy.stop()
 
