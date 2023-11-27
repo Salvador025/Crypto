@@ -140,6 +140,7 @@ classDiagram
         -previous_block: Block
         -magic_number: int
         -hash: string
+        -transaction_to_dict(): dict
         +calculate_hash(data: Transactions[], timestamp: datetime, number: int): string
         +mine_block(difficulty: int, status: StatusHolder): bool
         +to_dict(): dict

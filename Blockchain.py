@@ -21,8 +21,6 @@ class Transaction(ABC):
         PENDING = "PENDING"
         CONFIRMED = "CONFIRMED"
 
-    """ interface for transactions """
-
     @abstractmethod
     def change_status(self, status: Status) -> None:
         """method to change the status of the transaction"""
@@ -134,17 +132,22 @@ class Block:
     """class for blocks"""
 
     class StatusHolder:
+        """class for status holder"""
+
         def __init__(self):
-            self.__status = False
+            self.__status: bool = False
 
         @property
         def status(self):
+            """getter method for status"""
             return self.__status
 
         def Mining(self):
+            """method to change the status to True"""
             self.__status = True
 
         def NotMining(self):
+            """method to change the status to False"""
             self.__status = False
 
     def __init__(
@@ -159,16 +162,7 @@ class Block:
         self.__transactions: List[Transaction] = transactions
         self.__previous_block: Block = previous_block
         self.__magic_number: int = magic_number
-        transactions = []
-        for transaction in self.__transactions:
-            transaction = transaction.to_dict()
-            transactions.append(
-                {
-                    "amount": transaction["amount"],
-                    "sender": transaction["sender"],
-                    "receiver": transaction["receiver"],
-                }
-            )
+        transactions = self.__transaction_to_dict()
         self.__hash: str = self.calculate_hash(transactions, timestamp, self.__magic_number)
 
     @property
@@ -191,6 +185,21 @@ class Block:
         """getter method for hash"""
         return self.__hash
 
+    def __transaction_to_dict(self) -> list[dict]:
+        """method to return a list of dictionaries with the transaction data"""
+        transactions = []
+        for transaction in self.__transactions:
+            transaction = transaction.to_dict()
+            transactions.append(
+                {
+                    "amount": transaction["amount"],
+                    "sender": transaction["sender"],
+                    "receiver": transaction["receiver"],
+                }
+            )
+
+        return transactions
+
     @staticmethod
     def calculate_hash(data: List[Transaction], timestamp: datetime, number: int) -> str:
         """method to calculate the hash of the block"""
@@ -199,22 +208,12 @@ class Block:
         hash = hashlib.sha256(input_data)
         return hash.hexdigest()
 
-    # TODO refactor this method
     def mine_block(self, difficulty: int, status: StatusHolder) -> bool:
         """method to mine the block"""
         flag = self.__hash[:difficulty] != "0" * difficulty
         while flag and status.status:
             self.__magic_number += 1
-            transactions = []
-            for transaction in self.__transactions:
-                transaction = transaction.to_dict()
-                transactions.append(
-                    {
-                        "amount": transaction["amount"],
-                        "sender": transaction["sender"],
-                        "receiver": transaction["receiver"],
-                    }
-                )
+            transactions = self.__transaction_to_dict()
             self.__hash = self.calculate_hash(transactions, self.__timestamp, self.__magic_number)
             flag = self.__hash[:difficulty] != "0" * difficulty
         if flag:
@@ -283,6 +282,7 @@ class Blockchain:
         self.__mempool.append(transaction)
         return transaction
 
+    # TODO: refactor this method
     def get_balance(self, public_key: str) -> float:
         """method to get the balance of an address"""
         balance = 0
@@ -299,6 +299,7 @@ class Blockchain:
                             balance += transaction.reward
         return balance
 
+    # TODO: refactor this method
     @staticmethod
     def is_chain_valid(chain: dict) -> bool:
         """method to check if the chain is valid"""
@@ -327,6 +328,7 @@ class Blockchain:
         return True
 
     def __create_transaction(self, transaction_data: dict) -> Transaction:
+        """method to create a transaction from a dictionary"""
         if transaction_data["sender"] == "ITcoin":
             transaction = TransactionMiner(
                 transaction_data["amount"],
@@ -347,6 +349,7 @@ class Blockchain:
         return transaction
 
     def __create_transactions(self, transactions_data: dict) -> list[Transaction]:
+        """method to create a list of transactions from a dictionary"""
         transactions = []
         for transaction_data in transactions_data:
             transaction = self.__create_transaction(transaction_data)
@@ -409,17 +412,21 @@ if __name__ == "__main__":
     blockchain.create_transaction(public_key1, public_key2, 2)
     blockchain.create_transaction(public_key1, public_key2, 3)
 
-    blockchain.mine_block(public_key1)
+    status = Block.StatusHolder()
+    status.Mining()
+    blockchain.mine_block(public_key1, status)
     blockchain.create_transaction(public_key2, public_key1, 2)
-    blockchain.mine_block(public_key2)
+    status.Mining()
+    blockchain.mine_block(public_key2, status)
     print(blockchain.get_balance(public_key1))
     print(blockchain.get_balance(public_key2))
 
     blockchain.create_transaction(public_key1, public_key2, 2)
     blockchain.create_transaction(public_key1, public_key2, 3)
-    blockchain.mine_block(public_key1)
+    status.Mining()
+    blockchain.mine_block(public_key1, status)
 
     print(blockchain.get_balance(public_key1))
     print(blockchain.get_balance(public_key2))
-    print(blockchain.to_dict())
+    print(blockchain)
     print(blockchain.is_chain_valid(blockchain.to_dict()["chain"]))
