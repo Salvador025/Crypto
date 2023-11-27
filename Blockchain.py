@@ -72,7 +72,7 @@ class TransactionUser(Transaction):
         """method to change the status of the transaction"""
         self.__status = status
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """method to return a dictionary with the transaction data"""
         return {
             "amount": self.amount,
@@ -89,15 +89,15 @@ class TransactionMiner(Transaction):
         self, amount: float, miner: str, status: Transaction.Status = Transaction.Status.PENDING
     ) -> None:
         """constructor method for TransactionMiner class"""
-        self.__amount: float = amount
+        self.__reward: float = amount
         self.__miner: str = miner
         self.__coinbase = "ITcoin"
         self.__status: Transaction.Status = status
 
     @property
-    def amount(self) -> float:
+    def reward(self) -> float:
         """getter method for amount"""
-        return self.__amount
+        return self.__reward
 
     @property
     def miner(self) -> str:
@@ -118,10 +118,10 @@ class TransactionMiner(Transaction):
         """method to change the status of the transaction"""
         self.__status = status
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """method to return a dictionary with the transaction data"""
         return {
-            "amount": self.amount,
+            "amount": self.reward,
             "sender": self.coinbase,
             "receiver": self.miner,
             "status": self.status.value,
@@ -133,7 +133,7 @@ class Block:
 
     class StatusHolder:
         def __init__(self):
-            self.__status = 0
+            self.__status = False
 
         @property
         def status(self):
@@ -197,6 +197,7 @@ class Block:
         hash = hashlib.sha256(input_data)
         return hash.hexdigest()
 
+    # TODO refactor this method
     def mine_block(self, difficulty: int, status: StatusHolder) -> bool:
         """method to mine the block"""
         flag = self.__hash[:difficulty] != "0" * difficulty
@@ -216,10 +217,9 @@ class Block:
             flag = self.__hash[:difficulty] != "0" * difficulty
         if flag:
             return False
-        print("Block mined: " + self.__hash)
         return True
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """method to return a dictionary with the block data"""
         return {
             "timestamp": self.timestamp.strftime("%Y-%m-%d %H:%M:%S.%f"),
@@ -294,7 +294,7 @@ class Blockchain:
                             balance += transaction.amount
                     elif isinstance(transaction, TransactionMiner):
                         if transaction.miner == public_key:
-                            balance += transaction.amount
+                            balance += transaction.reward
         return balance
 
     @staticmethod
@@ -324,7 +324,7 @@ class Blockchain:
                 return False
         return True
 
-    def __create_transaction(self, transaction_data: dict) -> List[Transaction]:
+    def __create_transaction(self, transaction_data: dict) -> Transaction:
         if transaction_data["sender"] == "ITcoin":
             transaction = TransactionMiner(
                 transaction_data["amount"],
@@ -344,7 +344,7 @@ class Blockchain:
             )
         return transaction
 
-    def __create_transactions(self, transactions_data: dict) -> None:
+    def __create_transactions(self, transactions_data: dict) -> list[Transaction]:
         transactions = []
         for transaction_data in transactions_data:
             transaction = self.__create_transaction(transaction_data)
@@ -381,7 +381,7 @@ class Blockchain:
 
         return compressed_public_key
 
-    def to_dict(self):
+    def to_dict(self) -> dict:
         """method to return a dictionary with the blockchain data"""
         return {
             "chain": [block.to_dict() for block in self.chain],

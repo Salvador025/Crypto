@@ -40,27 +40,41 @@ classDiagram
 
     class Blockchain{
         -chain: Block[]
-        -mempool: Transaction[]
         -difficulty: int
+        -mempool: Transaction[]
         -mine_reward: int
         -create_genesis_block(): Block
         +last_block(): Block
-        +mine_block()
-        +is_chain_valid(): bool
-        +create_transaction(sender:str,receiver, amount)
-        +get_balance(public_key): float
-        +generate_key(): string
+        +mine_block(public_key: string, status: StatusHolder): bool
+        +create_transaction(sender:str,receiver: str, amount: float)
+        +get_balance(public_key: str): float
+        +is_chain_valid(chain: dict): bool
+        -create_transaction(transaction_data: dict): Transaction
+        -create_transactions(transactions_data: dict): Transaction[]
+        +update_chain(data: dict)
+        +update_mempool(data: dict)
+        +generate_key(seed_phrase: string): string
         +to_dict(): dict
     }
 
+<!--checking  -->
     class P2P{
+        -proxy: Proxy
         -public_key: string
-        -host: string
+        -blockchain: dict
         -port: int
-        -network: dict[string, string]
+        +app: Flask
+        -nodes: Set[(url: string, public_key: string)]
         +connect(public_key)
         +send_blockchain(blockchain: Blockchain)
         +receive_blockchain(): Blockchain
+    }
+
+    class UsersType{
+        <<enum>>
+        +SERVER
+        +USER
+        +MINER
     }
 
     class Subscriber{
@@ -86,8 +100,14 @@ classDiagram
         -magic_number: int
         -hash: string
         +calculate_hash(data: Transactions[], timestamp: datetime, number: int): string
-        +mine_block(difficulty: int)
+        +mine_block(difficulty: int, status: StatusHolder): bool
         +to_dict(): dict
+    }
+
+    class StatusHolder{
+        -status: bool
+        Mining() : bool
+        NotMining() : bool
     }
 
     class Transaction{
@@ -104,19 +124,18 @@ classDiagram
 
     class TransactionUser{
         -sender
-        -receiver
-        -amount
-        -status
+        -amount: float
+        -receiver: string
+        -status: Status
         +change_status(status: Status)
         +to_dict(): dict
     }
 
     class TransactionMiner{
-        -miner
-        -reward
-        -status
-        -coinbase
-        -status
+        -reward: float
+        -miner: string
+        -coinbase: string
+        -status: Status
         +change_status(status: Status)
         +to_dict(): dict
     }

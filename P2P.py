@@ -60,6 +60,7 @@ class P2P:
         dict_node = {"url": node, "public_key": public_key}
         self.__nodes.add(tuple(dict_node.items()))
 
+    # TODO refactor this method
     def replace_chain(self):
         """method to replace the current blockchain with the longest blockchain in the network"""
         network = tuple(self.__nodes)
@@ -206,7 +207,46 @@ class P2P:
                         self.__proxy.notify(transaction)
             return "transaction received"
 
+    def disconnect_node(self):
+        @self.app.route("/disconnect_node", methods=["DELETE"])
+        def disconnect_node_route():
+            """method to disconnect a node from the network"""
+            headers = request.headers
+            public_key_to_remove = headers["key"]
+            node_to_remove = None
+
+            # Find the tuple that contains the public key to remove
+            for node in self.__nodes:
+                if dict(node).get("public_key") == public_key_to_remove:
+                    node_to_remove = node
+                    break
+
+            # If the node is found, remove it from the set
+            if node_to_remove:
+                self.__nodes.remove(node_to_remove)
+                return "node disconnected"
+            else:
+                return "node not found"
+
+    # TODO refactor this method
     def stop(self):
+        """method to stop the server"""
+        network = tuple(self.__nodes)
+        for node in network:
+            node_dict = dict(node)
+            headers = {
+                "Content-Type": "application/json",
+                "port": str(self.__port),
+                "key": str(self.__public_key),
+            }
+            if node_dict["public_key"] == self.__public_key:
+                continue
+            url = node_dict["url"]
+
+            response = requests.delete(f"http://{url}/disconnect_node", headers=headers)
+            if response.status_code == 200:
+                print("node disconnected")
+
         if self.server:
             self.server.shutdown()
             self.flask_thread.join()
@@ -218,6 +258,7 @@ class P2P:
             self.receive_blockchain()
             self.get_network()
             self.receive_transaction()
+            self.disconnect_node()
             # cspell: disable-next-line
             local_ip = socket.gethostbyname(socket.gethostname())
             self.add_node(node=f"{local_ip}:{self.__port}", public_key=self.__public_key)
