@@ -14,7 +14,7 @@ class Subscriber(ABC):
         pass
 
 
-class OperationBlocked(ABC):
+class OperationsBlockchain(ABC):
     """Interface for the operations that can be done with the blockchain"""
 
     @abstractmethod
@@ -38,11 +38,11 @@ class OperationBlocked(ABC):
         pass
 
 
-class OperationP2P(ABC):
+class OperationsP2P(ABC):
     """Interface for the operations that can be done with the P2P network"""
 
     @abstractmethod
-    def connect(self, node: str, public_key: str) -> None:
+    def connect() -> None:
         """method to connect to a node"""
         pass
 
@@ -52,8 +52,8 @@ class OperationP2P(ABC):
         pass
 
 
-class Proxy(OperationBlocked, OperationP2P):
-    """Class that implements the operations that can be done with the blockchain"""
+class Proxy(OperationsBlockchain, OperationsP2P):
+    """class to create a proxy for the blockchain and the P2P network"""
 
     def __init__(
         self,
@@ -63,10 +63,10 @@ class Proxy(OperationBlocked, OperationP2P):
         type=UsersType.SERVER,
     ) -> None:
         """constructor of the class"""
-        self.__blockchain = Blockchain()
+        self.__blockchain: Blockchain = Blockchain()
         public_key = self.__blockchain.generate_key(private_key)
-        self.__p2p = P2P(public_key, self.__blockchain.to_dict(), port, self, type)
-        self.__subscriber = subscriber
+        self.__p2p: P2P = P2P(public_key, self.__blockchain.to_dict(), port, self, type)
+        self.__subscriber: Subscriber = subscriber
 
     @property
     def public_key(self) -> str:
@@ -81,13 +81,13 @@ class Proxy(OperationBlocked, OperationP2P):
     def connect(self) -> None:
         """method to connect to the network"""
         self.__p2p.connect_node()
-        self.run()
+        self.__run()
 
-    def run(self) -> None:
+    def __run(self) -> None:
         """method to run the node"""
         self.__p2p.run()
 
-    def stop(self):
+    def stop(self) -> None:
         """method to stop the node"""
         self.__p2p.stop()
 

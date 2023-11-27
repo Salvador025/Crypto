@@ -11,8 +11,8 @@ from Proxy import Proxy, Subscriber
 class User(Subscriber):
     def __init__(self, private_key: str, port=80) -> None:
         """constructor of the class"""
-        self.__proxy = Proxy(private_key, port, self, UsersType.USER)
-        self.__public_key = self.__proxy.public_key
+        self.__proxy: Proxy = Proxy(private_key, port, self, UsersType.USER)
+        self.__public_key: str = self.__proxy.public_key
         self.__proxy.connect()
         self.__proxy.get_blockchain()
 
@@ -34,8 +34,8 @@ class User(Subscriber):
         """method to send a transaction"""
         self.__proxy.create_transaction(self.__public_key, receiver, amount)
 
-    def stop(self):
-        """method to stop the node"""
+    def stop_connection(self):
+        """method to stop the connection with the network"""
         self.__proxy.stop()
 
     def update(self, message: dict) -> None:
@@ -46,9 +46,9 @@ class User(Subscriber):
 class Miner(Subscriber):
     def __init__(self, private_key: str, port=80) -> None:
         """constructor of the class"""
-        self.__proxy = Proxy(private_key, port, self, UsersType.MINER)
-        self.__mining_status = Block.StatusHolder()
-        self.__public_key = self.__proxy.public_key
+        self.__proxy: Proxy = Proxy(private_key, port, self, UsersType.MINER)
+        self.__mining_status: Block.StatusHolder = Block.StatusHolder()
+        self.__public_key: str = self.__proxy.public_key
         self.__proxy.connect()
         self.__proxy.get_blockchain()
 
@@ -75,7 +75,7 @@ class Miner(Subscriber):
         self.__mining_status.Mining()
         self.__proxy.mine_block(self.__mining_status)
 
-    def stop(self):
+    def stop_connection(self):
         """method to stop the node"""
         self.__proxy.stop()
 

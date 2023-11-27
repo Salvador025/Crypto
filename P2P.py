@@ -1,6 +1,7 @@
 import socket
 import threading
 from enum import Enum
+from typing import Set, Tuple
 from wsgiref.simple_server import make_server
 
 import requests
@@ -32,16 +33,16 @@ class P2P:
         self.__public_key: str = public_key
         self.__blockchain: dict = blockchain
         self.__port: int = port
-        self.app = Flask(__name__)
-        self.__nodes = set()
-        self.__type = type
-        self.server = None
+        self.__app: Flask = Flask(__name__)
+        self.__nodes: Set[Tuple[str, str]] = set()
+        self.__type: UsersType = type
+        self.__server = None
 
     @property
     def public_key(self) -> str:
         return self.__public_key
 
-    def connect_node(self):
+    def connect_node(self) -> None:
         """method to connect to node in the network and receive the blockchain"""
         headers = {
             "Content-Type": "application/json",
@@ -55,13 +56,13 @@ class P2P:
                 node = dict(node)
                 self.add_node(node["url"], node["public_key"])
 
-    def add_node(self, node, public_key):
+    def add_node(self, node: str, public_key: str) -> None:
         """method to add a node to the network"""
         dict_node = {"url": node, "public_key": public_key}
         self.__nodes.add(tuple(dict_node.items()))
 
     # TODO refactor this method
-    def replace_chain(self):
+    def replace_chain(self) -> dict:
         """method to replace the current blockchain with the longest blockchain in the network"""
         network = tuple(self.__nodes)
         longest_blockchain = self.__blockchain
@@ -91,7 +92,7 @@ class P2P:
             self.__blockchain = longest_blockchain
         return self.__blockchain
 
-    def send_block(self, chain: dict):
+    def send_block(self, chain: dict) -> None:
         """method to send the current blockchain to the network"""
         self.__blockchain = chain
         network = self.__nodes
@@ -107,7 +108,7 @@ class P2P:
             if response.status_code == 200:
                 print("blockchain sent")
 
-    def send_transaction(self, transaction: dict):
+    def send_transaction(self, transaction: dict) -> None:
         """method to send a transaction to the network"""
         network = self.__nodes
         for node in network:
@@ -122,7 +123,7 @@ class P2P:
             if response.status_code == 200:
                 pass
 
-    def validate_connection(self):
+    def validate_connection(self) -> bool:
         """method to validate if the current node is connected to the network"""
         if not self.__nodes:
             return False
@@ -138,10 +139,12 @@ class P2P:
                 return True
         return False
 
-    def get_network(self):
-        @self.app.route("/get_network", methods=["GET"])
-        def get_network_route():
-            """method to get the network"""
+    def get_network(self) -> None:
+        """method to get the network"""
+
+        @self.__app.route("/get_network", methods=["GET"])
+        def get_network_route() -> dict:
+            """route to get the network"""
             headers = request.headers
             public_keys = [
                 item[1]
@@ -160,10 +163,12 @@ class P2P:
                 data.append(dict_node)
             return data
 
-    def get_blockchain(self):
-        @self.app.route("/get_blockchain", methods=["GET"])
-        def get_blockchain_route():
-            """method to get the blockchain"""
+    def get_blockchain(self) -> None:
+        """method to get the blockchain"""
+
+        @self.__app.route("/get_blockchain", methods=["GET"])
+        def get_blockchain_route() -> dict:
+            """route to get the blockchain"""
             headers = request.headers
 
             public_keys = [
@@ -178,10 +183,12 @@ class P2P:
                 self.add_node(f"{request.remote_addr}:{headers['port']}", headers["key"])
             return self.__blockchain
 
-    def receive_blockchain(self):
-        @self.app.route("/receive_blockchain", methods=["POST"])
-        def receive_blockchain_route():
-            """method to receive the blockchain"""
+    def receive_blockchain(self) -> None:
+        """method to receive the blockchain"""
+
+        @self.__app.route("/receive_blockchain", methods=["POST"])
+        def receive_blockchain_route() -> str:
+            """route to receive the blockchain"""
             if self.__blockchain["length"] < request.json["length"] and Blockchain.is_chain_valid(
                 request.json["chain"]
             ):
@@ -194,10 +201,10 @@ class P2P:
                 return "blockchain received"
             return "blockchain rejected"
 
-    def receive_transaction(self):
-        @self.app.route("/receive_transaction", methods=["POST"])
-        def receive_transaction_route():
-            """method to receive a transaction"""
+    def receive_transaction(self) -> None:
+        @self.__app.route("/receive_transaction", methods=["POST"])
+        def receive_transaction_route() -> str:
+            """route to receive a transaction"""
             transaction = request.json
             self.__blockchain["mempool"].append(transaction)
             if self.__proxy:
@@ -207,10 +214,12 @@ class P2P:
                         self.__proxy.notify(transaction)
             return "transaction received"
 
-    def disconnect_node(self):
-        @self.app.route("/disconnect_node", methods=["DELETE"])
-        def disconnect_node_route():
-            """method to disconnect a node from the network"""
+    def disconnect_node(self) -> None:
+        """method to disconnect a node from the network"""
+
+        @self.__app.route("/disconnect_node", methods=["DELETE"])
+        def disconnect_node_route() -> str:
+            """route to disconnect a node from the network"""
             headers = request.headers
             public_key_to_remove = headers["key"]
             node_to_remove = None
@@ -229,7 +238,7 @@ class P2P:
                 return "node not found"
 
     # TODO refactor this method
-    def stop(self):
+    def stop(self) -> None:
         """method to stop the server"""
         network = tuple(self.__nodes)
         for node in network:
@@ -247,13 +256,16 @@ class P2P:
             if response.status_code == 200:
                 print("node disconnected")
 
-        if self.server:
-            self.server.shutdown()
+        if self.__server:
+            self.__server.shutdown()
             self.flask_thread.join()
 
-    def run(self):
+    def run(self) -> None:
+        """method to run the server"""
+
         def flask_thread():
-            self.app = Flask(__name__)
+            """method to run the server in a thread"""
+            self.__app = Flask(__name__)
             self.get_blockchain()
             self.receive_blockchain()
             self.get_network()
@@ -262,29 +274,8 @@ class P2P:
             # cspell: disable-next-line
             local_ip = socket.gethostbyname(socket.gethostname())
             self.add_node(node=f"{local_ip}:{self.__port}", public_key=self.__public_key)
-            self.server = make_server("0.0.0.0", self.__port, self.app)
-            self.server.serve_forever()
+            self.__server = make_server("0.0.0.0", self.__port, self.__app)
+            self.__server.serve_forever()
 
         self.flask_thread = threading.Thread(target=flask_thread)
         self.flask_thread.start()
-        """method to run the server"""
-
-
-if __name__ == "__main__":
-    blockchain = Blockchain()
-    # cspell: disable-next-line
-    public_key1 = blockchain.generate_key("ITAM")
-    print(public_key1)
-    # cspell: disable-next-line
-    public_key2 = blockchain.generate_key("FEWGW")
-    print(public_key2)
-
-    blockchain.create_transaction(public_key1, public_key2, 1)
-    blockchain.create_transaction(public_key1, public_key2, 2)
-    blockchain.create_transaction(public_key1, public_key2, 3)
-
-    blockchain.mine_block(public_key1)
-    blockchain.create_transaction(public_key2, public_key1, 2)
-    blockchain.mine_block(public_key2)
-    p2p = P2P("server", blockchain.to_dict())
-    p2p.run()

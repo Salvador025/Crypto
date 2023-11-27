@@ -12,7 +12,7 @@ classDiagram
     Proxy *--> Blockchain
     OperationsBlockchain <|..Proxy 
     Blockchain ..> Transaction
-    Proxy --> P2P
+    Proxy *--> P2P
     Proxy <-- P2P 
     OperationsP2P <|.. Proxy 
     Proxy --> Subscriber
@@ -20,8 +20,8 @@ classDiagram
     Status ..|> TransactionMiner   
     Miner ..|> Subscriber
     User ..|> Subscriber  
-    Proxy <-- User
-    Proxy <-- Miner
+    Proxy <--* User
+    Proxy <--* Miner
     P2P <|-- UsersType
     Block ..> StatusHolder
     Blockchain ..> StatusHolder

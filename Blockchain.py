@@ -13,6 +13,8 @@ from ecdsa import SECP256k1, SigningKey
 
 
 class Transaction(ABC):
+    """class for transactions"""
+
     class Status(Enum):
         """enumeration for transaction status"""
 

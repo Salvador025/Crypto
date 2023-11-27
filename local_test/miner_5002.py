@@ -26,7 +26,7 @@ try:
         elif decision == "5":
             miner.mine()
         elif decision == "6":
-            miner.stop()
+            miner.stop_connection()
             break
 except KeyboardInterrupt:
-    miner.stop()
+    miner.stop_connection()

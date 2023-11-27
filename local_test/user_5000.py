@@ -24,7 +24,7 @@ try:
         elif decision == "4":
             print(user.public_key)
         elif decision == "5":
-            user.stop()
+            user.stop_connection()
             break
 except KeyboardInterrupt:
-    user.stop()
+    user.stop_connection()
