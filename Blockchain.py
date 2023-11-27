@@ -134,19 +134,20 @@ class Block:
     class StatusHolder:
         """class for status holder"""
 
-        def __init__(self):
+        def __init__(self) -> None:
+            """constructor method for StatusHolder class"""
             self.__status: bool = False
 
         @property
-        def status(self):
+        def status(self) -> bool:
             """getter method for status"""
             return self.__status
 
-        def Mining(self):
+        def Mining(self) -> None:
             """method to change the status to True"""
             self.__status = True
 
-        def NotMining(self):
+        def NotMining(self) -> None:
             """method to change the status to False"""
             self.__status = False
 

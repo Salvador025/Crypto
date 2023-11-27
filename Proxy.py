@@ -81,9 +81,9 @@ class Proxy(OperationsBlockchain, OperationsP2P):
     def connect(self) -> None:
         """method to connect to the network"""
         self.__p2p.connect_node()
-        self.__run()
+        self.run()
 
-    def __run(self) -> None:
+    def run(self) -> None:
         """method to run the node"""
         self.__p2p.run()
 

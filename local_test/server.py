@@ -7,7 +7,7 @@ from Proxy import Proxy
 
 try:
     proxy = Proxy("server")
-    proxy.__run()
+    proxy.run()
     print("press ctrl+c to stop")
     while True:
         pass
