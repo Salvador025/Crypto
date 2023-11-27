@@ -16,13 +16,13 @@ classDiagram
     Proxy <-- P2P 
     OperationsP2P <|.. Proxy 
     Proxy --> Subscriber
-    Status ..|> TransactionUser 
-    Status ..|> TransactionMiner   
+    Status <-- TransactionUser 
+    Status <-- TransactionMiner   
     Miner ..|> Subscriber
     User ..|> Subscriber  
     Proxy <--* User
     Proxy <--* Miner
-    P2P <|-- UsersType
+    P2P --> UsersType
     Block ..> StatusHolder
     Blockchain ..> StatusHolder
     Miner --> StatusHolder
@@ -88,10 +88,12 @@ classDiagram
         -server: Server
         +connect()
         +add_node(node: string, public_key: string)
+        -compare_blockchain(length: int, blockchain: dict, max_length: int, longest_blockchain: dict): dict
         +replace_chain(): dict
         +send_block(chain: dict)
         +send_transaction(transaction: dict)
         +validate_connection(): bool
+        -get_public_keys(): string[]
         +get_network(): dict
         +get_blockchain(): dict
         +receive_blockchain(): string

@@ -27,7 +27,7 @@ class P2P:
         port: int = 80,
         proxy=None,
         type: UsersType = UsersType.SERVER,
-    ):
+    ) -> None:
         """P2P class constructor"""
         self.__proxy = proxy
         self.__public_key: str = public_key
@@ -40,15 +40,21 @@ class P2P:
 
     @property
     def public_key(self) -> str:
+        """getter method for the public key"""
         return self.__public_key
+
+    @property
+    def header(self) -> dict:
+        """getter method for the header"""
+        return {
+            "Content-Type": "application/json",
+            "port": str(self.__port),
+            "key": str(self.__public_key),
+        }
 
     def connect_node(self) -> None:
         """method to connect to node in the network and receive the blockchain"""
-        headers = {
-            "Content-Type": "application/json",
-            "key": str(self.__public_key),
-            "port": str(self.__port),
-        }
+        headers = self.header
         response = requests.get("http://127.0.0.1:80/get_network", headers=headers)
         if response.status_code == 200:
             nodes = response.json()
@@ -61,7 +67,18 @@ class P2P:
         dict_node = {"url": node, "public_key": public_key}
         self.__nodes.add(tuple(dict_node.items()))
 
-    # TODO refactor this method
+    def __compare_blockchain(
+        self, length: int, blockchain: dict, max_length: int, longest_blockchain: dict
+    ) -> bool:
+        """method to compare the current blockchain with the longest blockchain in the network"""
+        valid = Blockchain.is_chain_valid(blockchain["chain"])
+        bigger_chain = length > max_length
+        bigger_mempool = length == max_length and len(blockchain["mempool"]) > len(
+            longest_blockchain["mempool"]
+        )
+        return valid and (bigger_chain or bigger_mempool)
+
+    # TODO: refactor this method
     def replace_chain(self) -> dict:
         """method to replace the current blockchain with the longest blockchain in the network"""
         network = tuple(self.__nodes)
@@ -69,27 +86,17 @@ class P2P:
         max_length = self.__blockchain["length"]
         for node in network:
             node_dict = dict(node)
-            headers = {
-                "Content-Type": "application/json",
-                "port": str(self.__port),
-                "key": str(self.__public_key),
-            }
-            if node_dict["public_key"] == self.__public_key:
+            headers = self.header
+            if node_dict["public_key"] == self.public_key:
                 continue
             url = node_dict["url"]
             response = requests.get(f"http://{url}/get_blockchain", headers=headers)
             if response.status_code == 200:
                 length = response.json()["length"]
                 blockchain = response.json()
-                if Blockchain.is_chain_valid(blockchain["chain"]):
-                    if length > max_length or (
-                        length == max_length
-                        and len(blockchain["mempool"]) > len(longest_blockchain["mempool"])
-                    ):
-                        max_length = length
-                        longest_blockchain = blockchain
-        if longest_blockchain:
-            self.__blockchain = longest_blockchain
+                if self.__compare_blockchain(length, blockchain, max_length, longest_blockchain):
+                    max_length = length
+                    longest_blockchain = blockchain
         return self.__blockchain
 
     def send_block(self, chain: dict) -> None:
@@ -139,6 +146,13 @@ class P2P:
                 return True
         return False
 
+    def __get_public_keys(self) -> list[str]:
+        """method to get the public keys of the nodes in the network"""
+        public_keys = [
+            item[1] for sub_tuple in self.__nodes for item in sub_tuple if item[0] == "public_key"
+        ]
+        return public_keys
+
     def get_network(self) -> None:
         """method to get the network"""
 
@@ -146,17 +160,9 @@ class P2P:
         def get_network_route() -> dict:
             """route to get the network"""
             headers = request.headers
-            public_keys = [
-                item[1]
-                # cspell: disable-next-line
-                for sub_tupla in self.__nodes
-                # cspell: disable-next-line
-                for item in sub_tupla
-                if item[0] == "public_key"
-            ]
+            public_keys = self.__get_public_keys()
             if headers["key"] not in public_keys:
                 self.add_node(f"{request.remote_addr}:{headers['port']}", headers["key"])
-
             data = []
             for tuple_node in self.__nodes:
                 dict_node = dict(tuple_node)
@@ -170,15 +176,7 @@ class P2P:
         def get_blockchain_route() -> dict:
             """route to get the blockchain"""
             headers = request.headers
-
-            public_keys = [
-                item[1]
-                # cspell: disable-next-line
-                for sub_tupla in self.__nodes
-                # cspell: disable-next-line
-                for item in sub_tupla
-                if item[0] == "public_key"
-            ]
+            public_keys = self.__get_public_keys()
             if headers["key"] not in public_keys:
                 self.add_node(f"{request.remote_addr}:{headers['port']}", headers["key"])
             return self.__blockchain
@@ -202,6 +200,8 @@ class P2P:
             return "blockchain rejected"
 
     def receive_transaction(self) -> None:
+        """method to receive a transaction"""
+
         @self.__app.route("/receive_transaction", methods=["POST"])
         def receive_transaction_route() -> str:
             """route to receive a transaction"""
@@ -223,31 +223,23 @@ class P2P:
             headers = request.headers
             public_key_to_remove = headers["key"]
             node_to_remove = None
-
-            # Find the tuple that contains the public key to remove
             for node in self.__nodes:
                 if dict(node).get("public_key") == public_key_to_remove:
                     node_to_remove = node
                     break
-
-            # If the node is found, remove it from the set
             if node_to_remove:
                 self.__nodes.remove(node_to_remove)
                 return "node disconnected"
             else:
                 return "node not found"
 
-    # TODO refactor this method
+    # TODO: refactor this method
     def stop(self) -> None:
         """method to stop the server"""
         network = tuple(self.__nodes)
         for node in network:
             node_dict = dict(node)
-            headers = {
-                "Content-Type": "application/json",
-                "port": str(self.__port),
-                "key": str(self.__public_key),
-            }
+            headers = self.header
             if node_dict["public_key"] == self.__public_key:
                 continue
             url = node_dict["url"]
