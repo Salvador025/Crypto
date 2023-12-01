@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Instrucciones</title>
+    <style>
+        body {
+            text-align: center;
+        }
+
+        table {
+            margin: 0 auto;
+            width: 80%; /* Puedes ajustar el ancho aquí */
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Instrucciones para la configuración de la blockchain</h1>
+    <table border="1">
+        <tr>
+            <th>1- Clonar el repositorio</th>
+        </tr>
+        <tr>
+            <td>• Clonar el repositorio</td>
+        </tr>
+        <tr>
+            <td>• Crear un entorno virtual: <code>py -3 -m venv .venv</code> (git bash)</td>
+        </tr>
+        <tr>
+            <td>• Instalar dependencias: <code>pip install -r requirements.txt</code></td>
+        </tr>
+    </table>
+
+    <br>
+
+    <table border="1">
+        <tr>
+            <th>2- Abrir terminales</th>
+        </tr>
+        <tr>
+            <td>• Abrir 5 terminales en las cuales se va a correr los diferentes tipos de usuarios y el servidor</td>
+        </tr>
+        <tr>
+            <td>• En las 5 terminales iniciar el entorno virtual: <code>source .venv/Scripts/Activate</code> (git bash)</td>
+        </tr>
+        <tr>
+            <td>• Entrar a la carpeta local_test en cada terminal</td>
+        </tr>
+    </table>
+
+    <br>
+
+    <table border="1">
+        <tr>
+            <th>3- Prender servidor</th>
+        </tr>
+        <tr>
+            <td>• Ejecutar el código de server.py: <code>python server.py</code></td>
+        </tr>
+        <tr>
+            <td>• Se debe tener el virtual activado y estar en local_test para que funcione</td>
+        </tr>
+    </table>
+
+    <br>
+
+    <table border="1">
+        <tr>
+            <th>4- Conectar nodos</th>
+        </tr>
+        <tr>
+            <td>• En las otras 4 terminales ejecutar user_5000.py, user_5001.py, miner_5002.py, miner_5003.py</td>
+        </tr>
+        <tr>
+            <td>• Cada user y miner va a pedir una private key. NO SE PUEDE REPETIR entre ellos la private key. Cada uno debe tener una diferente.</td>
+        </tr>
+        <tr>
+
+            <td>• No es necesario conectar todos a la vez. Para probar de mejor manera la forma en la que se conecta, puedes conectar los dos users, hacer algunas transacciones y después conectar los miners.</td>
+        </tr>
+    </table>
+
+    <br>
+
+    <table border="1">
+        <tr>
+            <th>5- Hacer acciones</th>
+        </tr>
+        <tr>
+            
+            <td>• Los users y miners tienen 5 acciones en común:</td>
+        </tr>
+        <tr>
+            
+            <td>i. Print blockchain: regresa toda la blockchain</td>
+        </tr>
+        <tr>
+            
+            <td>ii. Create transaction: Crea una transacción y actualiza la red sobre esta acción. Esta acción requiere de una public key de otro usuario y una cantidad para mandar.</td>
+        </tr>
+        <tr>
+            
+            <td>iii. Get balance: regresa el balance del user o miner</td>
+        </tr>
+        <tr>
+            
+            <td>iv. Get public key: regresa la public key del user o miner</td>
+        </tr>
+        <tr>
+            
+            <td>v. Exit: detiene el programa</td>
+        </tr>
+        <tr>
+            
+            <td>• Los miners tienen otra acción:</td>
+        </tr>
+        <tr>
+            
+            <td>i. Mine block: mina un bloque y actualiza a la red sobre esta acción</td>
+        </tr>
+    </table>
+    
+    <br>
+
+    <table border="1">
+        <tr>
+            <td>6- Si se detiene el programa se puede repetir el paso tres con una nueva clave para simular que un nuevo user o miner se une a la red</td>
+        </tr>
+    </table>
+
+</body>
+
+</html>
